@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const menuItems = [
@@ -27,11 +27,11 @@ export default function MypageScreen() {
       {/* 헤더 */}
       <View style={styles.header}>
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <View style={styles.cameraLens}>
-              <View style={styles.appleIcon} />
-            </View>
-          </View>
+          <Image 
+            source={require('@/assets/images/logo.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>Dr. DANG</Text>
@@ -120,29 +120,9 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginRight: 12,
   },
-  logoCircle: {
+  logoImage: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraLens: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  appleIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#FF3B30',
   },
   headerTextContainer: {
     flex: 1,

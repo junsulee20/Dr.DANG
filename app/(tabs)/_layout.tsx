@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 
 export default function TabLayout() {
   return (
@@ -27,13 +27,11 @@ export default function TabLayout() {
         options={{
           title: '푸드샷',
           tabBarIcon: ({ color, size }) => (
-            <View style={styles.cameraIconContainer}>
-              <View style={[styles.cameraIconCircle, { borderColor: color }]}>
-                <View style={styles.cameraLens}>
-                  <View style={styles.appleIcon} />
-                </View>
-              </View>
-            </View>
+            <Image 
+              source={require('@/assets/images/logo.png')} 
+              style={[styles.logoImage, { width: size, height: size }]}
+              resizeMode="contain"
+            />
           ),
         }}
       />
@@ -44,6 +42,18 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="loading"
+        options={{
+          href: null, // 탭 바에 표시하지 않음
+        }}
+      />
+      <Tabs.Screen
+        name="result"
+        options={{
+          href: null, // 탭 바에 표시하지 않음
         }}
       />
     </Tabs>
@@ -63,32 +73,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  cameraIconContainer: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraLens: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  appleIcon: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#FF3B30',
+  logoImage: {
+    width: 24,
+    height: 24,
   },
 });

@@ -35,7 +35,7 @@ export default function FoodshotScreen() {
 
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
-      router.push('/loading' as any);
+      router.push('/(tabs)/loading' as any);
     }
   };
 
@@ -52,7 +52,7 @@ export default function FoodshotScreen() {
 
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
-      router.push('/loading' as any);
+      router.push('/(tabs)/loading' as any);
     }
   };
 
@@ -63,11 +63,11 @@ export default function FoodshotScreen() {
       {/* 헤더 */}
       <View style={styles.header}>
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <View style={styles.cameraLens}>
-              <View style={styles.appleIcon} />
-            </View>
-          </View>
+          <Image 
+            source={require('@/assets/images/logo.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>Dr. DANG</Text>
@@ -127,29 +127,9 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginRight: 12,
   },
-  logoCircle: {
+  logoImage: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraLens: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  appleIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#FF3B30',
   },
   headerTextContainer: {
     flex: 1,

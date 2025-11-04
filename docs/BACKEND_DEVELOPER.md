@@ -115,10 +115,11 @@ POST /api/food/analyze
 **필요한 API:**
 
 ```
-GET /api/records?date={YYYY-MM-DD}
+GET /api/records?date={YYYY-MM-DD}  // 특정 날짜 조회
+GET /api/records?month={YYYY-MM}    // 월별 조회 (캘린더용)
   Headers: Authorization: Bearer {token}
   
-  Response:
+  Response (date 쿼리):
     {
       date: "2025-11-02",
       meals: [
@@ -130,6 +131,23 @@ GET /api/records?date={YYYY-MM-DD}
           nutrition: object,
           createdAt: string
         }
+      ]
+    }
+
+  Response (month 쿼리):
+    {
+      month: "2025-11",
+      records: [
+        {
+          id: string,
+          date: "2025-11-02",
+          mealType: "breakfast" | "lunch" | "dinner",
+          foodName: string,
+          imageUrl: string,
+          nutrition: object,
+          createdAt: string
+        },
+        // ... 해당 월의 모든 기록
       ]
     }
 
@@ -148,14 +166,6 @@ POST /api/records
     {
       id: string,
       message: "Record created successfully"
-    }
-
-GET /api/records/calendar?month={YYYY-MM}
-  Headers: Authorization: Bearer {token}
-  
-  Response:
-    {
-      dates: ["2025-11-02", "2025-11-06", "2025-11-21"]
     }
 ```
 

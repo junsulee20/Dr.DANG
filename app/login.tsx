@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
@@ -17,13 +17,11 @@ export default function LoginScreen() {
       
       {/* 로고 영역 */}
       <View style={styles.logoContainer}>
-        <View style={styles.logoCircle}>
-          <View style={styles.cameraIcon}>
-            <View style={styles.cameraLens}>
-              <View style={styles.appleIcon} />
-            </View>
-          </View>
-        </View>
+        <Image 
+          source={require('@/assets/images/logo.png')} 
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.appName}>Dr. DANG</Text>
         <Text style={styles.appNameKorean}>닥터당</Text>
         <Text style={styles.tagline}>사진 한 장으로, 당뇨 케어</Text>
@@ -58,36 +56,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  logoCircle: {
+  logoImage: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#E5E5E5',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 24,
-  },
-  cameraIcon: {
-    width: 80,
-    height: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraLens: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  appleIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#FF3B30',
   },
   appName: {
     fontSize: 32,
