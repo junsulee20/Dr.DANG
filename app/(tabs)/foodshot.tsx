@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FoodshotScreen() {
   const router = useRouter();
-  const { setImageUri } = useFoodAnalysis();
+  const { setImageUri, setImageBase64 } = useFoodAnalysis();
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
 
   const requestPermissions = async () => {
@@ -32,13 +32,28 @@ export default function FoodshotScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 1,
+      quality: 0.8, // base64를 위해 quality 조정 (1.0은 너무 클 수 있음)
+      base64: true, // Base64 데이터 포함
     });
 
     if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
+      const asset = result.assets[0];
+      const uri = asset.uri;
       setLocalImageUri(uri);
       setImageUri(uri); // Context에 저장
+      
+      // Base64 데이터가 있으면 저장 (MIME 타입 추가)
+      if (asset.base64) {
+        const mimeType = asset.type === 'image/png' ? 'image/png' : 
+                        asset.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+        const base64Data = `data:${mimeType};base64,${asset.base64}`;
+        console.log('카메라에서 base64 받음, 길이:', base64Data.length);
+        setImageBase64(base64Data);
+      } else {
+        console.warn('카메라에서 base64를 받지 못했습니다.');
+        setImageBase64(null);
+      }
+      
       router.push('/(tabs)/loading' as any);
     }
   };
@@ -51,13 +66,28 @@ export default function FoodshotScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 1,
+      quality: 0.8, // base64를 위해 quality 조정 (1.0은 너무 클 수 있음)
+      base64: true, // Base64 데이터 포함
     });
 
     if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
+      const asset = result.assets[0];
+      const uri = asset.uri;
       setLocalImageUri(uri);
       setImageUri(uri); // Context에 저장
+      
+      // Base64 데이터가 있으면 저장 (MIME 타입 추가)
+      if (asset.base64) {
+        const mimeType = asset.type === 'image/png' ? 'image/png' : 
+                        asset.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+        const base64Data = `data:${mimeType};base64,${asset.base64}`;
+        console.log('카메라에서 base64 받음, 길이:', base64Data.length);
+        setImageBase64(base64Data);
+      } else {
+        console.warn('카메라에서 base64를 받지 못했습니다.');
+        setImageBase64(null);
+      }
+      
       router.push('/(tabs)/loading' as any);
     }
   };
