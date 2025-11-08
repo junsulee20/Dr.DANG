@@ -1,30 +1,98 @@
+import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
+import { analyzeFoodImage, generateAdvice } from '@/lib/openai';
+import { imageUriToBase64 } from '@/utils/image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoadingScreen() {
   const router = useRouter();
   const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState('이미지 분석 중...');
+  const { imageUri, setResult } = useFoodAnalysis();
 
   useEffect(() => {
-    // 진행률 시뮬레이션
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            router.replace('/(tabs)/result' as any);
-          }, 500);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 100);
+    if (!imageUri) {
+      Alert.alert('오류', '이미지를 찾을 수 없습니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
+      return;
+    }
 
-    return () => clearInterval(interval);
-  }, []);
+    let progressInterval: NodeJS.Timeout;
+
+    const analyzeFood = async () => {
+      try {
+        // Step 1: 이미지 분석
+        setStatus('이미지 분석 중...');
+        setProgress(10);
+
+        const imageBase64 = await imageUriToBase64(imageUri);
+        setProgress(30);
+
+        const step1Result = await analyzeFoodImage(imageBase64);
+        setProgress(50);
+        setStatus('조언 생성 중...');
+
+        // Step 2: 조언 생성
+        const step2Result = await generateAdvice(step1Result);
+        setProgress(80);
+
+        // 결과 저장
+        setResult({
+          step1: step1Result,
+          step2: step2Result,
+          imageUri: imageUri,
+        });
+
+        setProgress(100);
+        setStatus('완료!');
+
+        // 결과 화면으로 이동
+        setTimeout(() => {
+          router.replace('/(tabs)/result' as any);
+        }, 500);
+      } catch (error: any) {
+        console.error('분석 에러:', error);
+        Alert.alert(
+          '분석 실패',
+          error.message || '음식 분석 중 오류가 발생했습니다.',
+          [
+            {
+              text: '다시 시도',
+              onPress: () => router.back(),
+            },
+            {
+              text: '취소',
+              style: 'cancel',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      }
+    };
+
+    // 진행률 시뮬레이션 (실제 API 호출과 함께)
+    progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 95) {
+          // API 완료 전까지는 95%까지만
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 200);
+
+    analyzeFood();
+
+    return () => {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+    };
+  }, [imageUri, router, setResult]);
 
   const progressBlocks = 15;
   const filledBlocks = Math.floor((progress / 100) * progressBlocks);
@@ -54,7 +122,7 @@ export default function LoadingScreen() {
           <View style={styles.overlayContent}>
             <Text style={styles.hourglass}>⏳</Text>
             <Text style={styles.loadingTitle}>혈당 검사 중...</Text>
-            <Text style={styles.loadingText}>신뢰도 높은 결과를 위해</Text>
+            <Text style={styles.loadingText}>{status}</Text>
             <Text style={styles.loadingText}>잠시만 기다려주세요😊</Text>
           </View>
         </View>

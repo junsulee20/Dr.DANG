@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 // @ts-ignore
+import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -9,7 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FoodshotScreen() {
   const router = useRouter();
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const { setImageUri } = useFoodAnalysis();
+  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
 
   const requestPermissions = async () => {
     const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
@@ -34,7 +36,9 @@ export default function FoodshotScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setLocalImageUri(uri);
+      setImageUri(uri); // Context에 저장
       router.push('/(tabs)/loading' as any);
     }
   };
@@ -51,7 +55,9 @@ export default function FoodshotScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setLocalImageUri(uri);
+      setImageUri(uri); // Context에 저장
       router.push('/(tabs)/loading' as any);
     }
   };
@@ -78,8 +84,8 @@ export default function FoodshotScreen() {
       {/* 메인 콘텐츠 */}
       <View style={styles.content}>
         <View style={styles.imageContainer}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.foodImage} />
+          {localImageUri ? (
+            <Image source={{ uri: localImageUri }} style={styles.foodImage} />
           ) : (
             <>
               <View style={styles.cameraPlaceholder}>
@@ -96,7 +102,7 @@ export default function FoodshotScreen() {
         </View>
 
         {/* 버튼 영역 */}
-        {!imageUri && (
+        {!localImageUri && (
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.button} onPress={handleCamera}>
               <Ionicons name="camera" size={24} color="#FF3B30" />

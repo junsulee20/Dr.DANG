@@ -1,29 +1,61 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // @ts-ignore
+import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
 import Svg, { Polygon, Text as SvgText } from 'react-native-svg';
+
+// 문자열에서 숫자 추출 (예: "45g" -> 45)
+function extractNumber(str: string): number {
+  const match = str.match(/\d+\.?\d*/);
+  return match ? parseFloat(match[0]) : 0;
+}
 
 export default function ResultScreen() {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
+  const { result } = useFoodAnalysis();
 
-  // 샘플 데이터
+  useEffect(() => {
+    if (!result) {
+      Alert.alert('오류', '분석 결과를 찾을 수 없습니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
+    }
+  }, [result, router]);
+
+  if (!result) {
+    return null;
+  }
+
+  const { step1, step2, imageUri } = result;
+
+  // 영양소 데이터 파싱
   const nutritionData = {
-    carbs: 102,
-    protein: 30,
-    fat: 20,
+    carbs: extractNumber(step1.nutrients.carbohydrates),
+    protein: extractNumber(step1.nutrients.protein),
+    fat: extractNumber(step1.nutrients.fat),
   };
 
+  // 레이더 차트 점수 (Step 2의 score를 기반으로 계산)
+  // 실제로는 Step 1의 영양소 데이터를 기반으로 계산해야 하지만, 
+  // 현재는 Step 2의 score를 사용
   const radarScores = {
-    calories: 84,
-    fat: 79,
-    sodium: 81,
-    sugar: 89,
-    ratio: 35,
+    calories: Math.min(100, Math.max(0, extractNumber(step1.nutrients.totalCalories) / 2)),
+    fat: Math.min(100, Math.max(0, extractNumber(step1.nutrients.fat) * 10)),
+    sodium: Math.min(100, Math.max(0, extractNumber(step1.nutrients.sodium) / 2)),
+    sugar: Math.min(100, Math.max(0, extractNumber(step1.nutrients.sugars) * 5)),
+    ratio: step2.bloodSugarImpact.score,
   };
+
+  // 경고 아이콘 색상
+  const warningIconColor = step2.bloodSugarImpact.warning_icon === 'red' 
+    ? '#FF3B30' 
+    : step2.bloodSugarImpact.warning_icon === 'yellow'
+    ? '#FFCC00'
+    : '#34C759';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -47,8 +79,15 @@ export default function ResultScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* 음식 이미지 */}
         <View style={styles.imageContainer}>
-          <View style={styles.foodImagePlaceholder}>
-            <Text style={styles.foodImageLabel}>오늘의 메뉴 : 고기국수</Text>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.foodImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.foodImagePlaceholder}>
+              <Text style={styles.foodImageLabel}>오늘의 메뉴 : {step1.foodName}</Text>
+            </View>
+          )}
+          <View style={styles.foodImageOverlay}>
+            <Text style={styles.foodImageLabel}>오늘의 메뉴 : {step1.foodName}</Text>
           </View>
         </View>
 
@@ -56,20 +95,25 @@ export default function ResultScreen() {
         <View style={styles.card}>
           {/* 경고 */}
           <View style={styles.warningContainer}>
-            <Text style={styles.warningIcon}>▲</Text>
+            <Text style={[styles.warningIcon, { color: warningIconColor }]}>▲</Text>
             <View style={styles.warningTextContainer}>
-              <Text style={styles.warningText}>혈당이 40~70mg/dL 이상</Text>
-              <Text style={styles.warningText}>상승할 수 있어요!</Text>
+              <Text style={styles.warningText}>
+                혈당 영향 점수: {step2.bloodSugarImpact.score}점
+              </Text>
+              <Text style={styles.warningDescription}>
+                {step2.bloodSugarImpact.description}
+              </Text>
             </View>
           </View>
 
-          {/* 추천 */}
+          {/* 조언 */}
           <View style={styles.recommendationContainer}>
-            <Text style={styles.recommendationText}>
-              혈당 스파이크 예방을 위해{'\n'}
-              채소 → 단백질 → 지방 → 탄수화물 순서의{'\n'}
-              식사 방법을 추천드려요.
-            </Text>
+            {step2.tips.map((tip, index) => (
+              <View key={index} style={styles.tipItem}>
+                <Text style={styles.tipType}>{tip.type}</Text>
+                <Text style={styles.tipContent}>{tip.content}</Text>
+              </View>
+            ))}
           </View>
 
           {/* 영양정보 */}
@@ -77,13 +121,13 @@ export default function ResultScreen() {
             <Text style={styles.nutritionTitle}>영양정보</Text>
             <View style={styles.nutritionTags}>
               <View style={[styles.tag, styles.tagRed]}>
-                <Text style={styles.tagText}>탄수화물 {nutritionData.carbs}g</Text>
+                <Text style={styles.tagText}>탄수화물 {step1.nutrients.carbohydrates}</Text>
               </View>
               <View style={[styles.tag, styles.tagPink]}>
-                <Text style={styles.tagText}>단백질 {nutritionData.protein}g</Text>
+                <Text style={styles.tagText}>단백질 {step1.nutrients.protein}</Text>
               </View>
               <View style={[styles.tag, styles.tagBlue]}>
-                <Text style={styles.tagText}>지방 {nutritionData.fat}g</Text>
+                <Text style={styles.tagText}>지방 {step1.nutrients.fat}</Text>
               </View>
             </View>
           </View>
@@ -136,11 +180,16 @@ export default function ResultScreen() {
                 </Svg>
               </View>
 
-              {/* 경고 박스 */}
-              <View style={styles.warningBox}>
-                <Text style={styles.warningBoxText}>탄단지 비율이 나빠요</Text>
-                <Text style={styles.warningBoxText}>포화지방이 높아요</Text>
-                <Text style={styles.warningBoxText}>당이 약간 높아요</Text>
+              {/* 상세 정보 */}
+              <View style={styles.detailBox}>
+                <Text style={styles.detailBoxTitle}>상세 영양 정보</Text>
+                <Text style={styles.detailBoxText}>열량: {step1.nutrients.totalCalories}</Text>
+                <Text style={styles.detailBoxText}>탄수화물: {step1.nutrients.carbohydrates}</Text>
+                <Text style={styles.detailBoxText}>당: {step1.nutrients.sugars}</Text>
+                <Text style={styles.detailBoxText}>단백질: {step1.nutrients.protein}</Text>
+                <Text style={styles.detailBoxText}>지방: {step1.nutrients.fat}</Text>
+                <Text style={styles.detailBoxText}>나트륨: {step1.nutrients.sodium}</Text>
+                <Text style={styles.detailBoxText}>추정 중량: {step1.estimatedWeight}</Text>
               </View>
             </View>
           )}
@@ -190,21 +239,33 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 20,
   },
+  foodImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
   foodImagePlaceholder: {
     flex: 1,
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
-    justifyContent: 'flex-end',
-    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  foodImageLabel: {
+  foodImageOverlay: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
+  },
+  foodImageLabel: {
     fontSize: 14,
     color: '#333333',
-    alignSelf: 'center',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -235,6 +296,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#000000',
+    marginBottom: 4,
+  },
+  warningDescription: {
+    fontSize: 14,
+    color: '#666666',
+    lineHeight: 20,
   },
   recommendationContainer: {
     marginBottom: 20,
@@ -243,6 +310,20 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E5E5',
   },
   recommendationText: {
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 22,
+  },
+  tipItem: {
+    marginBottom: 16,
+  },
+  tipType: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+    marginBottom: 6,
+  },
+  tipContent: {
     fontSize: 14,
     color: '#333333',
     lineHeight: 22,
@@ -319,16 +400,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 20,
   },
-  warningBox: {
-    backgroundColor: '#FFE5F0',
+  detailBox: {
+    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 16,
     marginTop: 20,
   },
-  warningBoxText: {
+  detailBoxTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 12,
+  },
+  detailBoxText: {
     fontSize: 14,
     color: '#333333',
-    marginBottom: 8,
+    marginBottom: 6,
   },
 });
 
