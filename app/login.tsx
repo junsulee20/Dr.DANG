@@ -1,14 +1,33 @@
+import React, { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  const handleKakaoLogin = () => {
-    // TODO: 카카오 로그인 구현
-    router.replace('/(tabs)/foodshot' as any);
+  // 로그인 성공 시 자동으로 메인 화면으로 이동
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      router.replace('/(tabs)/foodshot' as any);
+    }
+  }, [isAuthenticated, authLoading, router]);
+
+  const handleKakaoLogin = async () => {
+    try {
+      setIsLoading(true);
+      // Supabase Auth를 사용한 카카오 로그인
+      await login();
+      // 로그인은 비동기로 처리되며, 콜백에서 세션이 설정됩니다
+    } catch (error: any) {
+      console.error('로그인 오류:', error);
+      Alert.alert('로그인 실패', error.message || '로그인 중 오류가 발생했습니다.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -29,8 +48,16 @@ export default function LoginScreen() {
 
       {/* 버튼 영역 */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.kakaoButton} onPress={handleKakaoLogin}>
-          <Text style={styles.kakaoButtonText}>카카오로 시작하기</Text>
+        <TouchableOpacity 
+          style={[styles.kakaoButton, (isLoading || authLoading) && styles.kakaoButtonDisabled]} 
+          onPress={handleKakaoLogin}
+          disabled={isLoading || authLoading}
+        >
+          {(isLoading || authLoading) ? (
+            <ActivityIndicator color="#000000" />
+          ) : (
+            <Text style={styles.kakaoButtonText}>카카오로 시작하기</Text>
+          )}
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.loginLink}>
@@ -91,6 +118,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 16,
+  },
+  kakaoButtonDisabled: {
+    opacity: 0.6,
   },
   kakaoButtonText: {
     fontSize: 16,

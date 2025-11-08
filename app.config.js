@@ -51,6 +51,8 @@ module.exports = {
         projectId: 'b3bcabcc-3ab5-4a9e-aa92-b3c9437e83f2',
       },
       openaiApiKey: process.env.OPENAI_API_KEY,
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     },
     owner: 'drdang',
   },
