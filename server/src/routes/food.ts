@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { supabaseAdmin } from '../config/supabase';
 import { analyzeFoodImage } from '../services/openai';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateSupabaseToken, SupabaseAuthRequest } from '../middleware/supabaseAuth';
 
 const router = express.Router();
 
@@ -88,7 +88,7 @@ const upload = multer({
  *       500:
  *         description: 서버 오류
  */
-router.post('/analyze', authenticateToken, upload.single('image'), async (req: AuthRequest, res, next) => {
+router.post('/analyze', authenticateSupabaseToken, upload.single('image'), async (req: SupabaseAuthRequest, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({

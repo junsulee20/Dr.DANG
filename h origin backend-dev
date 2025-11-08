@@ -1,0 +1,7 @@
+*   [33m49e8774[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mbackend-dev[m[33m)[m Merge remote-tracking branch 'origin/master' into backend-dev
+[31m|[m[32m\[m  
+[31m|[m * [33m70ce10c[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmaster[m[33m)[m API연결 성공, 웹 성공, 모바일 성공
+* [32m|[m [33m7713c45[m[33m ([m[1;31morigin/backend-dev[m[33m)[m feat:first backend-db-api-login
+[32m|[m[32m/[m  
+* [33m7873a45[m API연결 성공, 웹 성공, 모바일 실패
+* [33mac22534[m TASk수정

@@ -1,6 +1,6 @@
 import express from 'express';
 import { supabaseAdmin } from '../config/supabase';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateSupabaseToken, SupabaseAuthRequest } from '../middleware/supabaseAuth';
 
 const router = express.Router();
 
@@ -42,7 +42,7 @@ const router = express.Router();
  *       500:
  *         description: 서버 오류
  */
-router.get('/', authenticateToken, async (req: AuthRequest, res, next) => {
+router.get('/', authenticateSupabaseToken, async (req: SupabaseAuthRequest, res, next) => {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -134,7 +134,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res, next) => {
  *       500:
  *         description: 서버 오류
  */
-router.post('/', authenticateToken, async (req: AuthRequest, res, next) => {
+router.post('/', authenticateSupabaseToken, async (req: SupabaseAuthRequest, res, next) => {
   try {
     const userId = req.userId;
     if (!userId) {

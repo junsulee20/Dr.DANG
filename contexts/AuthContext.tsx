@@ -22,14 +22,27 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Supabase User를 앱 User로 변환
+// 카카오에서 받을 수 있는 정보가 제한적이므로 optional 필드 처리
 function transformUser(supabaseUser: SupabaseUser | null): User | null {
   if (!supabaseUser) return null;
 
+  // 카카오에서 받을 수 있는 정보 (사용자가 동의한 정보만)
+  const nickname = supabaseUser.user_metadata?.nickname 
+    || supabaseUser.user_metadata?.full_name 
+    || supabaseUser.user_metadata?.name
+    || `사용자_${supabaseUser.id.substring(0, 8)}`; // 기본값 설정
+
+  const email = supabaseUser.email || undefined; // optional
+  const profileImage = supabaseUser.user_metadata?.avatar_url 
+    || supabaseUser.user_metadata?.picture 
+    || supabaseUser.user_metadata?.profile_image
+    || undefined; // optional
+
   return {
     id: supabaseUser.id,
-    email: supabaseUser.email,
-    nickname: supabaseUser.user_metadata?.nickname || supabaseUser.user_metadata?.full_name,
-    profileImage: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
+    email,
+    nickname,
+    profileImage,
   };
 }
 

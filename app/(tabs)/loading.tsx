@@ -1,6 +1,5 @@
 import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
-import { analyzeFoodImage, generateAdvice } from '@/lib/openai';
-import { imageUriToBase64 } from '@/utils/image';
+import { analyzeFoodImage } from '@/lib/apiClient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -25,36 +24,31 @@ export default function LoadingScreen() {
 
     const analyzeFood = async () => {
       try {
-        // Step 1: 이미지 분석
-        setStatus('이미지 분석 중...');
+        if (!imageUri) {
+          throw new Error('이미지 URI가 없습니다.');
+        }
+
+        // Step 1: 백엔드 API로 이미지 분석
+        setStatus('이미지 업로드 중...');
         setProgress(10);
 
-        // Context에 base64가 있으면 사용, 없으면 변환
-        let finalBase64: string;
-        if (imageBase64) {
-          console.log('Context에서 base64 사용');
-          finalBase64 = imageBase64;
-        } else if (imageUri) {
-          console.log('이미지 URI에서 base64 변환');
-          finalBase64 = await imageUriToBase64(imageUri);
-        } else {
-          throw new Error('이미지 데이터가 없습니다.');
-        }
+        setStatus('음식 분석 중...');
         setProgress(30);
 
-        const step1Result = await analyzeFoodImage(finalBase64);
-        setProgress(50);
-        setStatus('조언 생성 중...');
+        // 백엔드 API 호출 (이미지 URI를 직접 전달)
+        const analysisResult = await analyzeFoodImage(imageUri);
+        setProgress(70);
 
-        // Step 2: 조언 생성
-        const step2Result = await generateAdvice(step1Result);
-        setProgress(80);
+        setStatus('분석 완료!');
+        setProgress(90);
 
-        // 결과 저장
+        // 결과 저장 (백엔드 응답 형식에 맞게 변환)
         setResult({
-          step1: step1Result,
-          step2: step2Result,
-          imageUri: imageUri,
+          step1: analysisResult.analyzedData,
+          step2: {
+            advice: '분석이 완료되었습니다. 결과를 확인해주세요.',
+          },
+          imageUri: analysisResult.imageUrl || imageUri,
         });
 
         setProgress(100);

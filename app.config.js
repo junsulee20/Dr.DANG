@@ -51,8 +51,9 @@ module.exports = {
         projectId: 'b3bcabcc-3ab5-4a9e-aa92-b3c9437e83f2',
       },
       openaiApiKey: process.env.OPENAI_API_KEY,
-      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      // 환경 변수에서 읽거나 기본값 사용
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://zhntmviycucdvupiccoa.supabase.co',
+      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpobnRtdml5Y3VjZHZ1cGljY29hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNDk3OTIsImV4cCI6MjA3NzcyNTc5Mn0.Ui1FeI3nAZ4mDuUPcFWjUpqMfShk-w1Vd4JbDQQUqjI',
     },
     owner: 'drdang',
   },
