@@ -10,8 +10,15 @@ export async function imageUriToBase64(imageUri: string): Promise<string> {
   try {
     console.log('이미지 URI 변환 시도:', imageUri, 'Platform:', Platform.OS);
 
+    // 이미 base64 데이터 URI 형식이면 그대로 반환
+    if (imageUri.startsWith('data:image/')) {
+      console.log('이미 base64 형식입니다.');
+      return imageUri;
+    }
+
     let base64: string;
     let mimeType = 'image/jpeg';
+    let finalUri = imageUri;
 
     // 웹 환경에서는 fetch를 사용
     if (Platform.OS === 'web' || imageUri.startsWith('blob:') || imageUri.startsWith('http://') || imageUri.startsWith('https://')) {
@@ -40,24 +47,72 @@ export async function imageUriToBase64(imageUri: string): Promise<string> {
       });
     }
 
+    // 네이티브 환경: content:// 또는 ph:// URI는 캐시로 복사 필요
+    if (imageUri.startsWith('content://') || imageUri.startsWith('ph://') || imageUri.startsWith('assets-library://')) {
+      try {
+        // 캐시 디렉토리에 임시 파일로 복사
+        const cacheDir = FileSystem.cacheDirectory;
+        if (!cacheDir) {
+          throw new Error('캐시 디렉토리를 찾을 수 없습니다.');
+        }
+        
+        const fileName = `temp_image_${Date.now()}.jpg`;
+        const destUri = `${cacheDir}${fileName}`;
+        
+        console.log('이미지를 캐시로 복사 중:', imageUri, '->', destUri);
+        await FileSystem.copyAsync({
+          from: imageUri,
+          to: destUri,
+        });
+        
+        finalUri = destUri;
+        console.log('이미지 복사 완료:', finalUri);
+      } catch (copyError: any) {
+        console.error('이미지 복사 실패:', copyError);
+        throw new Error(`이미지 복사 실패: ${copyError.message}`);
+      }
+    }
+
     // 네이티브 환경에서는 expo-file-system 사용
+    // expo-file-system v19에서는 EncodingType enum이 제거되었으므로 문자열 'base64' 직접 사용
     try {
-      base64 = await FileSystem.readAsStringAsync(imageUri, {
-        encoding: FileSystem.EncodingType.Base64,
+      // EncodingType이 존재하면 사용, 없으면 문자열 'base64' 사용
+      let encoding: any = 'base64';
+      if (FileSystem.EncodingType && FileSystem.EncodingType.Base64) {
+        encoding = FileSystem.EncodingType.Base64;
+      }
+      
+      base64 = await FileSystem.readAsStringAsync(finalUri, {
+        encoding: encoding,
       });
     } catch (fsError: any) {
       // file:// 프로토콜 제거 후 재시도
-      if (imageUri.startsWith('file://')) {
-        const normalizedUri = imageUri.replace('file://', '');
+      if (finalUri.startsWith('file://')) {
+        const normalizedUri = finalUri.replace('file://', '');
         try {
+          let encoding: any = 'base64';
+          if (FileSystem.EncodingType && FileSystem.EncodingType.Base64) {
+            encoding = FileSystem.EncodingType.Base64;
+          }
+          
           base64 = await FileSystem.readAsStringAsync(normalizedUri, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: encoding,
           });
         } catch (normalizedError: any) {
           throw new Error(`FileSystem 읽기 실패: ${fsError.message}, 정규화 후 재시도 실패: ${normalizedError.message}`);
         }
       } else {
         throw new Error(`FileSystem 읽기 실패: ${fsError.message}`);
+      }
+    }
+
+    // 임시 파일 정리 (복사한 경우)
+    if (finalUri !== imageUri && finalUri.startsWith(FileSystem.cacheDirectory || '')) {
+      try {
+        await FileSystem.deleteAsync(finalUri, { idempotent: true });
+        console.log('임시 파일 삭제 완료:', finalUri);
+      } catch (deleteError) {
+        console.warn('임시 파일 삭제 실패 (무시 가능):', deleteError);
       }
     }
 

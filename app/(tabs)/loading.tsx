@@ -11,7 +11,7 @@ export default function LoadingScreen() {
   const router = useRouter();
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('이미지 분석 중...');
-  const { imageUri, setResult } = useFoodAnalysis();
+  const { imageUri, imageBase64, setResult } = useFoodAnalysis();
 
   useEffect(() => {
     if (!imageUri) {
@@ -29,10 +29,20 @@ export default function LoadingScreen() {
         setStatus('이미지 분석 중...');
         setProgress(10);
 
-        const imageBase64 = await imageUriToBase64(imageUri);
+        // Context에 base64가 있으면 사용, 없으면 변환
+        let finalBase64: string;
+        if (imageBase64) {
+          console.log('Context에서 base64 사용');
+          finalBase64 = imageBase64;
+        } else if (imageUri) {
+          console.log('이미지 URI에서 base64 변환');
+          finalBase64 = await imageUriToBase64(imageUri);
+        } else {
+          throw new Error('이미지 데이터가 없습니다.');
+        }
         setProgress(30);
 
-        const step1Result = await analyzeFoodImage(imageBase64);
+        const step1Result = await analyzeFoodImage(finalBase64);
         setProgress(50);
         setStatus('조언 생성 중...');
 
