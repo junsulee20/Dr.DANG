@@ -51,6 +51,8 @@ module.exports = {
         projectId: 'b3bcabcc-3ab5-4a9e-aa92-b3c9437e83f2',
       },
       openaiApiKey: process.env.OPENAI_API_KEY,
+      // localhost 대신 127.0.0.1 사용 (IPv6 문제 방지)
+      apiUrl: process.env.API_URL || 'http://127.0.0.1:3001',
     },
     owner: 'drdang',
   },

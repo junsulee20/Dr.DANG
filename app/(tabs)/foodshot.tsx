@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 // @ts-ignore
 import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,6 +12,16 @@ export default function FoodshotScreen() {
   const router = useRouter();
   const { setImageUri, setImageBase64 } = useFoodAnalysis();
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+
+  // 화면에 포커스가 올 때마다 이미지 초기화
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔵 푸드샷 화면 포커스 - 이미지 초기화');
+      setLocalImageUri(null);
+      setImageUri(null);
+      setImageBase64(null);
+    }, [setImageUri, setImageBase64])
+  );
 
   const requestPermissions = async () => {
     const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
@@ -29,7 +39,7 @@ export default function FoodshotScreen() {
     if (!hasPermission) return;
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8, // base64를 위해 quality 조정 (1.0은 너무 클 수 있음)
@@ -41,20 +51,7 @@ export default function FoodshotScreen() {
       const uri = asset.uri;
       setLocalImageUri(uri);
       setImageUri(uri); // Context에 저장
-      
-      // Base64 데이터가 있으면 저장 (MIME 타입 추가)
-      if (asset.base64) {
-        const mimeType = asset.type === 'image/png' ? 'image/png' : 
-                        asset.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
-        const base64Data = `data:${mimeType};base64,${asset.base64}`;
-        console.log('카메라에서 base64 받음, 길이:', base64Data.length);
-        setImageBase64(base64Data);
-      } else {
-        console.warn('카메라에서 base64를 받지 못했습니다.');
-        setImageBase64(null);
-      }
-      
-      router.push('/(tabs)/loading' as any);
+      setImageBase64(null); // 백엔드가 처리하므로 base64는 불필요
     }
   };
 
@@ -63,11 +60,10 @@ export default function FoodshotScreen() {
     if (!hasPermission) return;
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.8, // base64를 위해 quality 조정 (1.0은 너무 클 수 있음)
-      base64: true, // Base64 데이터 포함
+      quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -75,19 +71,13 @@ export default function FoodshotScreen() {
       const uri = asset.uri;
       setLocalImageUri(uri);
       setImageUri(uri); // Context에 저장
-      
-      // Base64 데이터가 있으면 저장 (MIME 타입 추가)
-      if (asset.base64) {
-        const mimeType = asset.type === 'image/png' ? 'image/png' : 
-                        asset.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
-        const base64Data = `data:${mimeType};base64,${asset.base64}`;
-        console.log('카메라에서 base64 받음, 길이:', base64Data.length);
-        setImageBase64(base64Data);
-      } else {
-        console.warn('카메라에서 base64를 받지 못했습니다.');
-        setImageBase64(null);
-      }
-      
+      setImageBase64(null); // 백엔드가 처리하므로 base64는 불필요
+    }
+  };
+
+  const handleAnalyze = () => {
+    if (localImageUri) {
+      console.log('🔵 분석 시작 - loading 화면으로 이동');
       router.push('/(tabs)/loading' as any);
     }
   };
@@ -132,7 +122,7 @@ export default function FoodshotScreen() {
         </View>
 
         {/* 버튼 영역 */}
-        {!localImageUri && (
+        {!localImageUri ? (
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.button} onPress={handleCamera}>
               <Ionicons name="camera" size={24} color="#FF3B30" />
@@ -141,6 +131,23 @@ export default function FoodshotScreen() {
             <TouchableOpacity style={styles.button} onPress={handleGallery}>
               <Ionicons name="images-outline" size={24} color="#FF3B30" />
               <Text style={styles.buttonText}>갤러리</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[styles.button, styles.buttonSecondary]} 
+              onPress={() => setLocalImageUri(null)}
+            >
+              <Ionicons name="close-circle-outline" size={24} color="#666666" />
+              <Text style={[styles.buttonText, styles.buttonTextSecondary]}>다시 선택</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.buttonPrimary]} 
+              onPress={handleAnalyze}
+            >
+              <Ionicons name="analytics" size={24} color="#FFFFFF" />
+              <Text style={[styles.buttonText, styles.buttonTextPrimary]}>분석하기</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -240,6 +247,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FF3B30',
+  },
+  buttonPrimary: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  buttonTextPrimary: {
+    color: '#FFFFFF',
+  },
+  buttonSecondary: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#CCCCCC',
+  },
+  buttonTextSecondary: {
+    color: '#666666',
   },
 });
 

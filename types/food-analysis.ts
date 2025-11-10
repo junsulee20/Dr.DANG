@@ -30,5 +30,6 @@ export interface FoodAnalysisResult {
   step1: Step1Response;
   step2: Step2Response;
   imageUri?: string; // 원본 이미지 URI
+  fullAnalysis?: any; // 백엔드 API 전체 응답 (선택사항)
 }
 

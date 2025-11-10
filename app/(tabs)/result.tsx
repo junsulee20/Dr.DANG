@@ -1,11 +1,12 @@
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // @ts-ignore
 import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
 import Svg, { Polygon, Text as SvgText } from 'react-native-svg';
+import { createMealRecord } from '@/lib/api';
 
 // 문자열에서 숫자 추출 (예: "45g" -> 45)
 function extractNumber(str: string): number {
@@ -15,14 +16,18 @@ function extractNumber(str: string): number {
 
 export default function ResultScreen() {
   const router = useRouter();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner'>('lunch');
   const { result } = useFoodAnalysis();
 
   useEffect(() => {
     if (!result) {
-      Alert.alert('오류', '분석 결과를 찾을 수 없습니다.', [
-        { text: '확인', onPress: () => router.back() },
-      ]);
+      console.log('🔴 분석 결과 없음 - 뒤로 이동');
+      setTimeout(() => router.back(), 100);
     }
   }, [result, router]);
 
@@ -30,7 +35,48 @@ export default function ResultScreen() {
     return null;
   }
 
-  const { step1, step2, imageUri } = result;
+  const { step1, step2, imageUri, fullAnalysis } = result;
+
+  // 화면 포커스 시 saved 초기화 및 최상단 스크롤
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔵 결과 화면 포커스 - saved 초기화');
+      setSaved(false);
+      
+      // 최상단으로 스크롤
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      }, 100);
+    }, [])
+  );
+
+  // 저장 핸들러
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      console.log('🔵 기록 저장 시작...');
+      
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      await createMealRecord({
+        date: today,
+        mealType: selectedMealType,
+        foodName: step1.foodName,
+        imageUrl: fullAnalysis?.imageUrl || imageUri || '',
+        analysisResult: fullAnalysis || {},
+      });
+      
+      console.log('✅ 기록 저장 완료!');
+      setSaved(true);
+      setShowSaveModal(false);
+    } catch (error: any) {
+      console.error('❌ 저장 에러:', error);
+      console.error('에러 메시지:', error.message);
+      // 웹 환경에서는 콘솔에만 출력
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // 영양소 데이터 파싱
   const nutritionData = {
@@ -76,7 +122,11 @@ export default function ResultScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+      >
         {/* 음식 이미지 */}
         <View style={styles.imageContainer}>
           {imageUri ? (
@@ -194,7 +244,95 @@ export default function ResultScreen() {
             </View>
           )}
         </View>
+
+        {/* 저장 버튼 */}
+        <View style={styles.saveButtonContainer}>
+          {saved ? (
+            <View style={[styles.saveButton, styles.saveButtonSuccess]}>
+              <Text style={styles.saveButtonText}>✓ 저장 완료!</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={() => setShowSaveModal(true)}
+            >
+              <Text style={styles.saveButtonText}>📝 기록 저장하기</Text>
+            </TouchableOpacity>
+          )}
+          
+          {/* 다시하기 버튼 (항상 표시) */}
+          <TouchableOpacity
+            style={[styles.saveButton, styles.retryButton]}
+            onPress={() => router.replace('/(tabs)/foodshot' as any)}
+          >
+            <Text style={[styles.saveButtonText, styles.retryButtonText]}>🔄 다시 촬영하기</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      {/* 저장 Modal */}
+      <Modal
+        visible={showSaveModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSaveModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>식사 시간 선택</Text>
+            <Text style={styles.modalSubtitle}>오늘 날짜로 저장됩니다</Text>
+
+            {/* 식사 시간 선택 */}
+            <View style={styles.mealTypeContainer}>
+              {[
+                { type: 'breakfast' as const, label: '🌅 아침' },
+                { type: 'lunch' as const, label: '☀️ 점심' },
+                { type: 'dinner' as const, label: '🌙 저녁' },
+              ].map((meal) => (
+                <TouchableOpacity
+                  key={meal.type}
+                  style={[
+                    styles.mealTypeButton,
+                    selectedMealType === meal.type && styles.mealTypeButtonSelected,
+                  ]}
+                  onPress={() => setSelectedMealType(meal.type)}
+                >
+                  <Text
+                    style={[
+                      styles.mealTypeText,
+                      selectedMealType === meal.type && styles.mealTypeTextSelected,
+                    ]}
+                  >
+                    {meal.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* 버튼 */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setShowSaveModal(false)}
+                disabled={saving}
+              >
+                <Text style={styles.modalButtonTextCancel}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSave]}
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalButtonTextSave}>저장</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -416,6 +554,120 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333333',
     marginBottom: 6,
+  },
+  saveButtonContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  saveButton: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  saveButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  saveButtonSuccess: {
+    backgroundColor: '#34C759',
+    shadowColor: '#34C759',
+  },
+  retryButton: {
+    backgroundColor: '#F5F5F5',
+    borderWidth: 2,
+    borderColor: '#FF6B35',
+    shadowOpacity: 0.1,
+    marginTop: 12,
+  },
+  retryButtonText: {
+    color: '#FF6B35',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  mealTypeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 24,
+  },
+  mealTypeButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  mealTypeButtonSelected: {
+    backgroundColor: '#FFE5E5',
+    borderColor: '#FF6B35',
+  },
+  mealTypeText: {
+    fontSize: 16,
+    color: '#666666',
+    fontWeight: '600',
+  },
+  mealTypeTextSelected: {
+    color: '#FF6B35',
+    fontWeight: 'bold',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#F5F5F5',
+  },
+  modalButtonTextCancel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  modalButtonSave: {
+    backgroundColor: '#FF6B35',
+  },
+  modalButtonTextSave: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });
 

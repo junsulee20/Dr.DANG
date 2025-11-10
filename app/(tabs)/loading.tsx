@@ -1,10 +1,9 @@
 import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
-import { analyzeFoodImage, generateAdvice } from '@/lib/openai';
-import { imageUriToBase64 } from '@/utils/image';
+import { analyzeFoodImage as analyzeFoodImageAPI } from '@/lib/api';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoadingScreen() {
@@ -15,9 +14,8 @@ export default function LoadingScreen() {
 
   useEffect(() => {
     if (!imageUri) {
-      Alert.alert('오류', '이미지를 찾을 수 없습니다.', [
-        { text: '확인', onPress: () => router.back() },
-      ]);
+      console.log('🔴 이미지 없음 - 뒤로 이동');
+      setTimeout(() => router.back(), 100);
       return;
     }
 
@@ -25,36 +23,58 @@ export default function LoadingScreen() {
 
     const analyzeFood = async () => {
       try {
-        // Step 1: 이미지 분석
-        setStatus('이미지 분석 중...');
+        // 백엔드 API로 음식 분석
+        setStatus('이미지 업로드 중...');
         setProgress(10);
 
-        // Context에 base64가 있으면 사용, 없으면 변환
-        let finalBase64: string;
-        if (imageBase64) {
-          console.log('Context에서 base64 사용');
-          finalBase64 = imageBase64;
-        } else if (imageUri) {
-          console.log('이미지 URI에서 base64 변환');
-          finalBase64 = await imageUriToBase64(imageUri);
-        } else {
-          throw new Error('이미지 데이터가 없습니다.');
+        if (!imageUri) {
+          throw new Error('이미지가 없습니다.');
         }
+
+        console.log('🔵 백엔드 API로 음식 분석 시작...');
+        console.log('🔵 이미지 URI:', imageUri);
+        console.log('🔵 이미지 URI 타입:', typeof imageUri);
+        console.log('🔵 이미지 URI 길이:', imageUri?.length);
         setProgress(30);
+        setStatus('GPT-4로 음식 분석 중...');
 
-        const step1Result = await analyzeFoodImage(finalBase64);
-        setProgress(50);
-        setStatus('조언 생성 중...');
-
-        // Step 2: 조언 생성
-        const step2Result = await generateAdvice(step1Result);
+        console.log('🔵 analyzeFoodImageAPI 호출 직전');
+        // 백엔드 API 호출
+        const analysisResult = await analyzeFoodImageAPI(imageUri);
+        console.log('🔵 analyzeFoodImageAPI 호출 완료');
+        
+        console.log('✅ 분석 완료:', analysisResult);
         setProgress(80);
+        setStatus('결과 처리 중...');
 
-        // 결과 저장
+        // 결과를 Context 형식으로 변환
         setResult({
-          step1: step1Result,
-          step2: step2Result,
+          step1: {
+            foodName: analysisResult.foodName,
+            estimatedWeight: '1인분',
+            nutrients: {
+              totalCalories: `${analysisResult.detailedNutrition.calories}kcal`,
+              carbohydrates: `${analysisResult.nutrition.carbs}g`,
+              sugars: `${analysisResult.detailedNutrition.sugar}g`,
+              protein: `${analysisResult.nutrition.protein}g`,
+              fat: `${analysisResult.nutrition.fat}g`,
+              sodium: `${analysisResult.detailedNutrition.sodium}mg`,
+            },
+          },
+          step2: {
+            bloodSugarImpact: {
+              score: analysisResult.detailedNutrition.ratio,
+              description: analysisResult.analysisResult.warning,
+              warning_icon: analysisResult.expectedGlucoseRise >= 60 ? 'red' :
+                           analysisResult.expectedGlucoseRise >= 30 ? 'yellow' : 'green',
+            },
+            tips: analysisResult.actionGuide.map((guide, index) => ({
+              type: ['양 조절', '보완 음식', '식사 순서'][index] || '기타',
+              content: guide,
+            })),
+          },
           imageUri: imageUri,
+          fullAnalysis: analysisResult, // 전체 결과 저장
         });
 
         setProgress(100);
@@ -65,22 +85,36 @@ export default function LoadingScreen() {
           router.replace('/(tabs)/result' as any);
         }, 500);
       } catch (error: any) {
-        console.error('분석 에러:', error);
-        Alert.alert(
-          '분석 실패',
-          error.message || '음식 분석 중 오류가 발생했습니다.',
-          [
-            {
-              text: '다시 시도',
-              onPress: () => router.back(),
-            },
-            {
-              text: '취소',
-              style: 'cancel',
-              onPress: () => router.back(),
-            },
-          ]
-        );
+        console.error('❌ 분석 에러 발생!');
+        console.error('에러 객체:', error);
+        console.error('에러 타입:', typeof error);
+        console.error('에러 코드:', error?.code);
+        console.error('에러 메시지:', error?.message);
+        console.error('에러 상세:', error?.details);
+        
+        try {
+          console.error('에러 전체 (JSON):', JSON.stringify(error, null, 2));
+        } catch (e) {
+          console.error('에러 JSON 변환 실패:', e);
+        }
+        
+        // 에러 스택도 출력
+        if (error?.stack) {
+          console.error('에러 스택:', error.stack);
+        }
+        
+        const errorMessage = error?.code && error?.message
+          ? `[${error.code}] ${error.message}` 
+          : error?.message || '음식 분석 중 오류가 발생했습니다.';
+        
+        console.log('🔴 에러 메시지:', errorMessage);
+        console.log('🔴 1초 후 뒤로 이동...');
+        
+        // 웹에서는 Alert 대신 뒤로 가기
+        setTimeout(() => {
+          console.log('🔴 뒤로 이동 실행');
+          router.back();
+        }, 1000);
       }
     };
 

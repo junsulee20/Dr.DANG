@@ -3,18 +3,21 @@ import Constants from 'expo-constants';
 import OpenAI from 'openai';
 
 // 환경 변수에서 API 키 가져오기
+// ⚠️ 주의: 이 파일은 더 이상 사용하지 않습니다!
+// 백엔드 API(lib/api.ts)를 통해 음식 분석을 호출하세요.
 const getApiKey = (): string => {
   // Expo에서는 Constants.expoConfig.extra를 통해 app.json의 extra 필드 접근
   const apiKey = Constants.expoConfig?.extra?.openaiApiKey;
   if (!apiKey) {
-    console.error('OPENAI_API_KEY가 설정되지 않았습니다. app.json의 extra.openaiApiKey를 확인하세요.');
-    throw new Error('OPENAI_API_KEY가 설정되지 않았습니다.');
+    console.warn('⚠️ OPENAI_API_KEY가 설정되지 않았습니다. 백엔드 API를 사용하세요.');
+    return ''; // 에러 대신 빈 문자열 반환
   }
   return apiKey as string;
 };
 
+// OpenAI 클라이언트 (더 이상 사용하지 않음 - 백엔드에서 처리)
 const openai = new OpenAI({
-  apiKey: getApiKey(),
+  apiKey: getApiKey() || 'dummy-key',
   dangerouslyAllowBrowser: true, // 브라우저 환경에서 사용 허용 (보안 주의)
 });
 
