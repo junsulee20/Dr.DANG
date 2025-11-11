@@ -62,6 +62,7 @@ export default function LoadingScreen() {
             },
           },
           step2: {
+            nutritionSummary: analysisResult.analysisResult?.nutritionSummary,
             bloodSugarImpact: {
               score: analysisResult.detailedNutrition.ratio,
               description: analysisResult.analysisResult.warning,

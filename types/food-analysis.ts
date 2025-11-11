@@ -14,6 +14,7 @@ export interface Step1Response {
 
 // Step 2 API 응답 타입
 export interface Step2Response {
+  nutritionSummary?: string; // 영양정보에 대한 평가
   bloodSugarImpact: {
     score: number; // 1-100
     description: string;

@@ -15,6 +15,7 @@ interface Step1Response {
 }
 
 interface Step2Response {
+  nutritionSummary?: string;
   bloodSugarImpact: {
     score: number;
     description: string;
@@ -110,13 +111,15 @@ async function generateAdvice(step1Result: Step1Response): Promise<Step2Response
 [지침]
 1. 제공된 수치를 바탕으로 혈당 영향 '점수(score)'를 매기세요.
 2. 수치를 '반복'하지 말고, 그 수치가 '어떤 의미'인지 '해석'하여 'description'을 작성하세요.
-3. 'tips'는 매번 다양하고 창의적으로, 전문적인 원리를 쉽게 설명해야 합니다.
+3. 'nutritionSummary' 필드에, 제공된 영양성분(예: 단백질, 지방, 나트륨, 칼로리)을 종합적으로 평가하는 '한 줄 요약'을 작성하세요.
+4. 'tips'는 매번 다양하고 창의적으로, 전문적인 원리를 쉽게 설명해야 합니다.
 
 절대로 JSON 객체 외의 설명, 인사, 서문(예: "알겠습니다")을 덧붙여서는 안 됩니다.
 
 [반환할 JSON 스키마]
 
 {
+  "nutritionSummary": "제공된 데이터를 바탕으로 한 영양 성분(단백질, 지방, 나트륨 등)에 대한 한 줄 평가 및 진단.",
   "bloodSugarImpact": {
     "score": "제공된 데이터를 바탕으로 계산한 1-100점 사이의 혈당 영향 점수",
     "description": "이 점수와 영양소가 당뇨 환자에게 어떤 의미인지 전문적으로 해석한 글.",
@@ -225,7 +228,8 @@ export async function analyzeFood(imageBase64: string, imageUrl: string): Promis
       analysisResult: {
         canRise: step2Result.bloodSugarImpact.score >= 30,
         warning: step2Result.bloodSugarImpact.description,
-      },
+        ...(step2Result.nutritionSummary && { nutritionSummary: step2Result.nutritionSummary }),
+      } as any,
       imageUrl,
     };
 

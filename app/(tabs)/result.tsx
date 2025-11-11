@@ -5,14 +5,7 @@ import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Act
 import { SafeAreaView } from 'react-native-safe-area-context';
 // @ts-ignore
 import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
-import Svg, { Polygon, Text as SvgText } from 'react-native-svg';
 import { createMealRecord } from '@/lib/api';
-
-// 문자열에서 숫자 추출 (예: "45g" -> 45)
-function extractNumber(str: string): number {
-  const match = str.match(/\d+\.?\d*/);
-  return match ? parseFloat(match[0]) : 0;
-}
 
 export default function ResultScreen() {
   const router = useRouter();
@@ -78,23 +71,6 @@ export default function ResultScreen() {
     }
   };
 
-  // 영양소 데이터 파싱
-  const nutritionData = {
-    carbs: extractNumber(step1.nutrients.carbohydrates),
-    protein: extractNumber(step1.nutrients.protein),
-    fat: extractNumber(step1.nutrients.fat),
-  };
-
-  // 레이더 차트 점수 (Step 2의 score를 기반으로 계산)
-  // 실제로는 Step 1의 영양소 데이터를 기반으로 계산해야 하지만, 
-  // 현재는 Step 2의 score를 사용
-  const radarScores = {
-    calories: Math.min(100, Math.max(0, extractNumber(step1.nutrients.totalCalories) / 2)),
-    fat: Math.min(100, Math.max(0, extractNumber(step1.nutrients.fat) * 10)),
-    sodium: Math.min(100, Math.max(0, extractNumber(step1.nutrients.sodium) / 2)),
-    sugar: Math.min(100, Math.max(0, extractNumber(step1.nutrients.sugars) * 5)),
-    ratio: step2.bloodSugarImpact.score,
-  };
 
   // 경고 아이콘 색상
   const warningIconColor = step2.bloodSugarImpact.warning_icon === 'red' 
@@ -194,53 +170,50 @@ export default function ResultScreen() {
           {isExpanded && (
             <View style={styles.detailedNutrition}>
               <Text style={styles.detailedTitle}>상세 영양정보</Text>
-              <Text style={styles.ratioText}>탄단지 비율</Text>
-              <Text style={styles.ratioScore}>{radarScores.ratio}점</Text>
-
-              {/* 레이더 차트 */}
-              <View style={styles.radarContainer}>
-                <Svg width={300} height={300} viewBox="0 0 300 300">
-                  {/* 외곽 펜타곤 */}
-                  <Polygon
-                    points="150,50 250,120 200,250 100,250 50,120"
-                    fill="none"
-                    stroke="#333"
-                    strokeWidth="2"
-                  />
-                  {/* 내부 펜타곤 - 점수를 0-100 기준으로 계산 */}
-                  <Polygon
-                    points={`150,${50 + (100 - radarScores.calories) * 1.0} ${150 + (radarScores.fat - 50) * 1.0},${120 + (radarScores.fat - 50) * 0.5} ${200 - (100 - radarScores.sodium) * 1.0},${250 - (100 - radarScores.sodium) * 1.0} ${100 + (100 - radarScores.sugar) * 0.5},${250 - (100 - radarScores.sugar) * 1.0} ${50 + (100 - radarScores.ratio) * 0.5},${120 - (100 - radarScores.ratio) * 0.5}`}
-                    fill="rgba(255, 107, 53, 0.3)"
-                    stroke="#FF6B35"
-                    strokeWidth="2"
-                  />
-                  {/* 점수 라벨 */}
-                  <SvgText x="150" y="40" fontSize="14" fill="#FF6B35" textAnchor="middle">
-                    열량 {radarScores.calories}점
-                  </SvgText>
-                  <SvgText x="260" y="125" fontSize="14" fill="#FF6B35" textAnchor="middle">
-                    지방 {radarScores.fat}점
-                  </SvgText>
-                  <SvgText x="210" y="260" fontSize="14" fill="#FF6B35" textAnchor="middle">
-                    나트륨 {radarScores.sodium}점
-                  </SvgText>
-                  <SvgText x="40" y="175" fontSize="14" fill="#FF6B35" textAnchor="middle">
-                    당 {radarScores.sugar}점
-                  </SvgText>
-                </Svg>
+              
+              {/* 영양정보 표 */}
+              <View style={styles.nutritionTable}>
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableHeader}>영양소</Text>
+                  <Text style={styles.tableHeader}>함량</Text>
+                </View>
+                <View style={[styles.tableRow, styles.tableRowEven]}>
+                  <Text style={styles.tableLabel}>열량</Text>
+                  <Text style={styles.tableValue}>{step1.nutrients.totalCalories}</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableLabel}>탄수화물</Text>
+                  <Text style={styles.tableValue}>{step1.nutrients.carbohydrates}</Text>
+                </View>
+                <View style={[styles.tableRow, styles.tableRowEven]}>
+                  <Text style={styles.tableLabel}>당</Text>
+                  <Text style={styles.tableValue}>{step1.nutrients.sugars}</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableLabel}>단백질</Text>
+                  <Text style={styles.tableValue}>{step1.nutrients.protein}</Text>
+                </View>
+                <View style={[styles.tableRow, styles.tableRowEven]}>
+                  <Text style={styles.tableLabel}>지방</Text>
+                  <Text style={styles.tableValue}>{step1.nutrients.fat}</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableLabel}>나트륨</Text>
+                  <Text style={styles.tableValue}>{step1.nutrients.sodium}</Text>
+                </View>
+                <View style={[styles.tableRow, styles.tableRowEven]}>
+                  <Text style={styles.tableLabel}>추정 중량</Text>
+                  <Text style={styles.tableValue}>{step1.estimatedWeight}</Text>
+                </View>
               </View>
 
-              {/* 상세 정보 */}
-              <View style={styles.detailBox}>
-                <Text style={styles.detailBoxTitle}>상세 영양 정보</Text>
-                <Text style={styles.detailBoxText}>열량: {step1.nutrients.totalCalories}</Text>
-                <Text style={styles.detailBoxText}>탄수화물: {step1.nutrients.carbohydrates}</Text>
-                <Text style={styles.detailBoxText}>당: {step1.nutrients.sugars}</Text>
-                <Text style={styles.detailBoxText}>단백질: {step1.nutrients.protein}</Text>
-                <Text style={styles.detailBoxText}>지방: {step1.nutrients.fat}</Text>
-                <Text style={styles.detailBoxText}>나트륨: {step1.nutrients.sodium}</Text>
-                <Text style={styles.detailBoxText}>추정 중량: {step1.estimatedWeight}</Text>
-              </View>
+              {/* 영양정보 평가 */}
+              {step2.nutritionSummary && (
+                <View style={styles.summaryBox}>
+                  <Text style={styles.summaryTitle}>영양정보 평가</Text>
+                  <Text style={styles.summaryText}>{step2.nutritionSummary}</Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -521,39 +494,61 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333333',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  ratioText: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 4,
-  },
-  ratioScore: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FF6B35',
+  nutritionTable: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    overflow: 'hidden',
     marginBottom: 20,
   },
-  radarContainer: {
-    alignItems: 'center',
-    marginVertical: 20,
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
   },
-  detailBox: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 20,
+  tableRowEven: {
+    backgroundColor: '#F9F9F9',
   },
-  detailBoxTitle: {
-    fontSize: 16,
+  tableHeader: {
+    flex: 1,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333333',
-    marginBottom: 12,
   },
-  detailBoxText: {
+  tableLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#666666',
+  },
+  tableValue: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333333',
+    textAlign: 'right',
+  },
+  summaryBox: {
+    backgroundColor: '#F0F7FF',
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B35',
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  summaryText: {
     fontSize: 14,
     color: '#333333',
-    marginBottom: 6,
+    lineHeight: 20,
   },
   saveButtonContainer: {
     paddingHorizontal: 20,
