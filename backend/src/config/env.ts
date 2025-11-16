@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+// 프로젝트 루트의 .env 파일 읽기
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 export const config = {
   supabase: {

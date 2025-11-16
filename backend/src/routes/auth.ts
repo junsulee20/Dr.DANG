@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { supabaseAdmin } from '../config/supabase';
 import axios from 'axios';
 import { config } from '../config/env';
+import jwt from 'jsonwebtoken';
 
 const router = Router();
 
@@ -88,10 +89,12 @@ router.post('/kakao', async (req: Request, res: Response) => {
 
     const kakaoId = kakaoUser.id.toString();
     const email = kakaoUser.kakao_account?.email || `kakao_${kakaoId}@drdang.app`;
-    const name = kakaoUser.kakao_account?.profile?.nickname || '사용자';
+    const nickname = kakaoUser.kakao_account?.profile?.nickname || kakaoUser.properties?.nickname || '사용자';
+
+    console.log('✅ 카카오 사용자 정보:', { kakaoId, email, nickname });
 
     // 2. Supabase에서 사용자 찾기 또는 생성
-    let userId: string;
+    let user: { id: string; name: string; email: string };
 
     // 먼저 kakao_id로 사용자 검색
     const { data: existingUsers, error: searchError } = await supabaseAdmin
@@ -107,7 +110,8 @@ router.post('/kakao', async (req: Request, res: Response) => {
 
     if (existingUsers && existingUsers.length > 0) {
       // 기존 사용자
-      userId = existingUsers[0].id;
+      user = existingUsers[0];
+      console.log('✅ 기존 사용자 로그인:', user.id);
     } else {
       // 새 사용자 생성
       const { data: newUser, error: insertError } = await supabaseAdmin
@@ -115,7 +119,7 @@ router.post('/kakao', async (req: Request, res: Response) => {
         .insert({
           kakao_id: kakaoId,
           email,
-          name,
+          name: nickname,
         })
         .select()
         .single();
@@ -125,55 +129,36 @@ router.post('/kakao', async (req: Request, res: Response) => {
         throw new Error('사용자 생성 중 오류가 발생했습니다.');
       }
 
-      userId = newUser.id;
+      user = newUser;
+      console.log('✅ 새 사용자 생성:', user.id);
     }
 
-    // 3. Supabase Auth 세션 생성 (서비스 역할로)
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: {
-        name,
-        kakao_id: kakaoId,
-      },
+    // 3. JWT 토큰 생성 (자체 JWT 사용, Supabase Auth 사용 안 함)
+    const jwtPayload = {
+      sub: user.id,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+    };
+
+    const accessToken = jwt.sign(jwtPayload, config.jwt.secret, {
+      expiresIn: '2h',
     });
 
-    if (authError && authError.message !== 'User already registered') {
-      console.error('Auth creation error:', authError);
-      throw new Error('인증 생성 중 오류가 발생했습니다.');
-    }
-
-    // 4. JWT 토큰 생성 (Supabase 방식)
-    // 실제로는 Supabase의 signInWithPassword 또는 다른 방법을 사용해야 하지만,
-    // 여기서는 간단히 처리하기 위해 사용자 정보만 반환
-    const { data: session, error: sessionError } = await supabaseAdmin.auth.signInWithPassword({
-      email,
-      password: kakaoAccessToken, // 임시 비밀번호 (실제로는 더 안전한 방법 필요)
+    const refreshToken = jwt.sign({ sub: user.id, typ: 'refresh' }, config.jwt.secret, {
+      expiresIn: '30d',
     });
 
-    // 세션 생성 실패 시 대체 방법
-    let accessToken = '';
-    let refreshToken = '';
+    console.log('✅ JWT 토큰 발급 완료:', user.id);
 
-    if (sessionError) {
-      // 대체: 직접 JWT 생성 (프로덕션에서는 권장하지 않음)
-      // 여기서는 Supabase의 서비스 키를 사용한 토큰 생성
-      console.warn('Session creation failed, using alternative method');
-      accessToken = 'temp_token_' + userId; // 임시
-      refreshToken = 'temp_refresh_' + userId; // 임시
-    } else {
-      accessToken = session.session?.access_token || '';
-      refreshToken = session.session?.refresh_token || '';
-    }
-
-    // 5. 응답 반환
+    // 4. 응답 반환
     return res.json({
       accessToken,
       refreshToken,
       user: {
-        id: userId,
-        name,
-        email,
+        id: user.id,
+        name: user.name,
+        email: user.email,
       },
     });
   } catch (error: any) {

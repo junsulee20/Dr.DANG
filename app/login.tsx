@@ -4,65 +4,33 @@ import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { kakaoLogin, setAuthToken } from '@/lib/api';
+import { getKakaoAccessToken } from '@/utils/kakaoAuth';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  // 실제 로그인 처리 함수
+  // 실제 카카오 로그인 처리
   const doLogin = async () => {
     try {
-      console.log('🔵 테스트 로그인 시작...');
-      
-      // 백엔드에 테스트 사용자 생성 요청
-      // localhost 대신 127.0.0.1 사용 (IPv6 문제 방지)
-      const url = 'http://127.0.0.1:3001/api/test/create-user';
-      console.log('🔵 요청 URL:', url);
-      
-      const requestBody = {
-        name: '테스트 유저',
-        email: `test_${Date.now()}@drdang.app`,
-        height: 175,
-        weight: 70,
-      };
-      console.log('🔵 요청 바디:', requestBody);
-      console.log('🔵 fetch 호출 직전...');
-      
-      // 타임아웃 추가
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('⏰ 요청 타임아웃 (10초)');
-        controller.abort();
-      }, 10000);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      console.log('🔵 fetch 완료!');
-      console.log('🔵 응답 상태:', response.status);
-      console.log('🔵 응답 헤더:', response.headers);
-      
-      const data = await response.json();
-      console.log('🔵 응답 데이터:', data);
+      console.log('🔵 카카오 OAuth 시작...');
 
-      if (response.ok) {
-        // JWT 토큰 저장
-        setAuthToken(data.token);
-        console.log('✅ 토큰 저장 완료');
-        console.log(`✅ ${data.user.name}님 환영합니다!`);
-        
-        // 웹에서는 Alert 대신 바로 페이지 이동
-        router.replace('/(tabs)/foodshot' as any);
-      } else {
-        throw new Error(data.error?.message || '로그인 실패');
+      const kakaoAccessToken = await getKakaoAccessToken();
+      console.log('🔵 카카오 Access Token:', kakaoAccessToken ? '받음 ✅' : '실패 ❌');
+      
+      if (!kakaoAccessToken) {
+        throw new Error('카카오 로그인에 실패했습니다. 팝업이 차단되었거나 동의를 취소했을 수 있습니다.');
       }
+
+      console.log('🔵 백엔드 카카오 로그인 요청... (토큰 길이:', kakaoAccessToken.length, ')');
+      const result = await kakaoLogin(kakaoAccessToken);
+
+      // JWT 토큰 저장
+      setAuthToken(result.accessToken);
+      console.log('✅ 토큰 저장 완료');
+      console.log(`✅ ${result.user.name}님 환영합니다!`);
+
+      router.replace('/(tabs)/foodshot' as any);
     } catch (error: any) {
       console.error('❌ 로그인 에러 발생!');
       console.error('에러 객체:', error);
@@ -74,7 +42,7 @@ export default function LoginScreen() {
       if (error?.name === 'AbortError') {
         errorMessage = '요청 시간이 초과되었습니다. 백엔드 서버를 확인해주세요.';
       } else if (error?.message?.includes('fetch')) {
-        errorMessage = '네트워크 오류입니다. 백엔드 서버(http://127.0.0.1:3001)가 실행 중인지 확인하세요.';
+        errorMessage = '네트워크 오류입니다. 백엔드 서버가 실행 중인지 확인하세요.';
       } else {
         errorMessage = error?.message || '알 수 없는 오류가 발생했습니다.';
       }
@@ -90,7 +58,7 @@ export default function LoginScreen() {
     }
   };
 
-  // 테스트용 카카오 로그인 (바로 실행)
+  // 카카오 로그인 버튼 핸들러
   const handleKakaoLogin = async () => {
     setLoading(true);
     await doLogin();

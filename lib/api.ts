@@ -179,10 +179,18 @@ export interface KakaoLoginResponse {
 export async function kakaoLogin(
   kakaoAccessToken: string
 ): Promise<KakaoLoginResponse> {
-  return apiFetch<KakaoLoginResponse>('/auth/kakao', {
-    method: 'POST',
-    body: JSON.stringify({ kakaoAccessToken }),
-  });
+  console.log('🔵 API 호출: POST /auth/kakao');
+  try {
+    const result = await apiFetch<KakaoLoginResponse>('/auth/kakao', {
+      method: 'POST',
+      body: JSON.stringify({ kakaoAccessToken }),
+    });
+    console.log('✅ 백엔드 응답 성공:', result.user.name);
+    return result;
+  } catch (error: any) {
+    console.error('❌ 백엔드 응답 에러:', error);
+    throw error;
+  }
 }
 
 // ========================================

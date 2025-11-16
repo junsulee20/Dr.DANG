@@ -45,3 +45,5 @@ app-example
 
 # test scripts (not needed in production)
 /scripts
+.env
+
