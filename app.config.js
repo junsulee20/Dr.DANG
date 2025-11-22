@@ -13,6 +13,7 @@ module.exports = {
     ios: {
       bundleIdentifier: 'com.drdang.app', // iOS Bundle ID (카카오 콘솔에도 동일하게 등록)
       supportsTablet: true,
+      associatedDomains: ['applinks:172.22.166.53'], // Universal Link 설정 (로컬 개발용)
     },
     android: {
       package: 'com.drdang.app', // 앱 패키지명 (카카오 콘솔에도 동일하게 등록)
@@ -22,6 +23,20 @@ module.exports = {
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
+      intentFilters: [
+        {
+          action: 'VIEW',
+          autoVerify: true,
+          data: [
+            {
+              scheme: 'http',
+              host: '172.22.166.53',
+              pathPrefix: '/auth/kakao/callback',
+            },
+          ],
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ],
     },
     web: {
       output: 'static',
@@ -52,10 +67,10 @@ module.exports = {
         projectId: 'b3bcabcc-3ab5-4a9e-aa92-b3c9437e83f2',
       },
       openaiApiKey: process.env.OPENAI_API_KEY,
-      // localhost 대신 127.0.0.1 사용 (IPv6 문제 방지)
+      // 프론트엔드에서 백엔드 API 서버 URL
       apiUrl: process.env.API_URL || 'http://127.0.0.1:3001',
       kakaoClientId: process.env.EXPO_PUBLIC_KAKAO_CLIENT_ID || process.env.KAKAO_CLIENT_ID,
-      kakaoRedirectUri: process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI || 'drdang://auth/kakao',
+      // kakaoRedirectUri는 더 이상 사용하지 않음 (백엔드 콜백 URL을 자동으로 사용)
     },
     owner: 'drdang',
   },

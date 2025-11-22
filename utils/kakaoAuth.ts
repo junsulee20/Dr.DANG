@@ -1,5 +1,5 @@
-import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
+import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -99,11 +99,17 @@ export async function getKakaoAccessToken(): Promise<string | null> {
   
   // 웹에서는 현재 URL을 redirect URI로 사용
   const isWeb = Platform.OS === 'web';
+  
+  // 모바일에서는 백엔드 콜백 URL 사용
+  // 백엔드에 /auth/kakao/callback 엔드포인트가 추가되었습니다
+  const apiUrl = 
+    (Constants.expoConfig?.extra as any)?.apiUrl || 
+    'http://127.0.0.1:3001';
+  const backendCallbackUrl = apiUrl.replace(/\/$/, '') + '/auth/kakao/callback';
+  
   const redirectUri = isWeb 
     ? window.location.origin + '/auth/kakao/callback'
-    : ((Constants.expoConfig?.extra as any)?.kakaoRedirectUri ||
-      process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI ||
-      'drdang://auth/kakao');
+    : (process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI || backendCallbackUrl);
 
   console.log('🔵 Platform:', Platform.OS);
   console.log('🔵 Client ID:', clientId ? clientId.substring(0, 10) + '...' : 'MISSING ❌');
@@ -124,17 +130,74 @@ export async function getKakaoAccessToken(): Promise<string | null> {
       return await webKakaoOAuth(authUrl, clientId, redirectUri);
     }
 
-    // 모바일 환경에서는 기존 방식 사용
-    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-    if (result.type !== 'success' || !result.url) {
+    // 모바일 환경에서는 openAuthSessionAsync 사용
+    // redirectUri와 일치하는 URL로 리다이렉트되면 자동으로 앱으로 돌아옵니다
+    // Universal Link 설정 없이도 작동합니다!
+    console.log('🔵 모바일 카카오 OAuth 시작...');
+    console.log('🔵 Auth URL:', authUrl);
+    console.log('🔵 Redirect URI:', redirectUri);
+    
+    // 타임아웃 추가 (60초)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('카카오 로그인 타임아웃: 웹뷰가 응답하지 않습니다. 백엔드 서버 연결을 확인해주세요.'));
+      }, 60000);
+    });
+    
+    console.log('🔵 WebBrowser.openAuthSessionAsync 호출 중...');
+    const authPromise = WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+    
+    const result = await Promise.race([authPromise, timeoutPromise]);
+    
+    console.log('🔵 WebBrowser 결과:', JSON.stringify(result, null, 2));
+    
+    if (result.type === 'cancel') {
+      console.error('❌ 사용자가 로그인을 취소했습니다.');
       return null;
     }
-
-    const url = new URL(result.url);
+    
+    if (result.type === 'dismiss') {
+      console.error('❌ 로그인 창이 닫혔습니다.');
+      return null;
+    }
+    
+    if (result.type !== 'success') {
+      console.error('❌ 예상치 못한 결과 타입:', result.type);
+      return null;
+    }
+    
+    if (!result.url) {
+      console.error('❌ 리다이렉트 URL이 없습니다.');
+      return null;
+    }
+    
+    console.log('🔵 리다이렉트 URL:', result.url);
+    
+    let url: URL;
+    try {
+      url = new URL(result.url);
+    } catch (e) {
+      console.error('❌ URL 파싱 실패:', result.url, e);
+      return null;
+    }
+    
     const code = url.searchParams.get('code');
-    if (!code) return null;
+    const error = url.searchParams.get('error');
+    
+    if (error) {
+      console.error('❌ 카카오 인증 오류:', error);
+      return null;
+    }
+    
+    if (!code) {
+      console.error('❌ Authorization code가 없습니다. URL:', result.url);
+      return null;
+    }
+    
+    console.log('✅ Authorization code 받음:', code.substring(0, 20) + '...');
 
     // Exchange authorization code for access token
+    console.log('🔵 카카오 토큰 교환 중...');
     const tokenResp = await fetch('https://kauth.kakao.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -147,13 +210,20 @@ export async function getKakaoAccessToken(): Promise<string | null> {
     });
 
     if (!tokenResp.ok) {
-      console.error('Kakao token exchange failed', await tokenResp.text());
+      const errorText = await tokenResp.text();
+      console.error('❌ 카카오 토큰 교환 실패:', errorText);
+      console.error('❌ Status:', tokenResp.status);
       return null;
     }
+    
     const tokenJson = await tokenResp.json();
+    console.log('✅ Access Token 받음:', tokenJson.access_token ? tokenJson.access_token.substring(0, 20) + '...' : '없음');
     return tokenJson.access_token as string;
-  } catch (e) {
-    console.error('Kakao OAuth error', e);
+  } catch (e: any) {
+    console.error('❌ Kakao OAuth 에러 발생!');
+    console.error('❌ 에러 타입:', e?.name);
+    console.error('❌ 에러 메시지:', e?.message);
+    console.error('❌ 전체 에러:', e);
     return null;
   }
 }

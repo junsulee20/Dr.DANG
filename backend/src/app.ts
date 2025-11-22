@@ -1,16 +1,16 @@
-import express from 'express';
 import cors from 'cors';
+import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import { errorHandler } from './middleware/errorHandler';
 import { validateEnv } from './config/env';
 import { swaggerSpec } from './config/swagger';
+import { errorHandler } from './middleware/errorHandler';
 
 // 라우터 임포트
 import authRouter from './routes/auth';
 import foodRouter from './routes/food';
 import recordsRouter from './routes/records';
-import userRouter from './routes/user';
 import testRouter from './routes/test';
+import userRouter from './routes/user';
 
 // 환경 변수 검증
 validateEnv();
@@ -25,6 +25,40 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 헬스체크
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Universal Link 설정 파일 (iOS)
+app.get('/.well-known/apple-app-site-association', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json({
+    applinks: {
+      apps: [],
+      details: [
+        {
+          appID: 'TEAM_ID.com.drdang.app', // TEAM_ID는 Apple Developer Team ID로 교체 필요
+          paths: ['/auth/kakao/callback*'],
+        },
+      ],
+    },
+  });
+});
+
+// App Link 설정 파일 (Android)
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json([
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.drdang.app',
+        sha256_cert_fingerprints: [
+          // SHA-256 지문은 나중에 실제 앱 서명 인증서로 교체 필요
+          'PLACEHOLDER_SHA256_FINGERPRINT',
+        ],
+      },
+    },
+  ]);
 });
 
 // Swagger UI

@@ -1,7 +1,7 @@
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, ActivityIndicator } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // @ts-ignore
 import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
@@ -163,7 +163,7 @@ export default function ResultScreen() {
             style={styles.expandButton}
             onPress={() => setIsExpanded(!isExpanded)}>
             <Text style={styles.expandButtonText}>
-              {isExpanded ? '접기 ↑↑↑' : '펼쳐서 상세 영양정보 확인하기 ↓↓↓'}
+              {isExpanded ? '접기' : '펼쳐서 상세 영양정보 확인하기'}
             </Text>
           </TouchableOpacity>
 
@@ -175,7 +175,7 @@ export default function ResultScreen() {
               <View style={styles.nutritionTable}>
                 <View style={styles.tableRow}>
                   <Text style={styles.tableHeader}>영양소</Text>
-                  <Text style={styles.tableHeader}>함량</Text>
+                  <Text style={[styles.tableHeader, styles.tableHeaderRight]}>함량</Text>
                 </View>
                 <View style={[styles.tableRow, styles.tableRowEven]}>
                   <Text style={styles.tableLabel}>열량</Text>
@@ -519,6 +519,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333333',
+  },
+  tableHeaderRight: {
+    textAlign: 'right',
   },
   tableLabel: {
     flex: 1,

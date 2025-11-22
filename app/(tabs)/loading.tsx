@@ -36,7 +36,7 @@ export default function LoadingScreen() {
         console.log('🔵 이미지 URI 타입:', typeof imageUri);
         console.log('🔵 이미지 URI 길이:', imageUri?.length);
         setProgress(30);
-        setStatus('GPT-4로 음식 분석 중...');
+        setStatus('신뢰도 높은 결과를 위해');
 
         console.log('🔵 analyzeFoodImageAPI 호출 직전');
         // 백엔드 API 호출

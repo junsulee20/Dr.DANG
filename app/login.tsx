@@ -1,14 +1,50 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
-import { kakaoLogin, setAuthToken } from '@/lib/api';
+import { kakaoLogin, setAuthToken, KakaoLoginResponse, emailLogin } from '@/lib/api';
 import { getKakaoAccessToken } from '@/utils/kakaoAuth';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [kakaoLoading, setKakaoLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handleLoginSuccess = (result: KakaoLoginResponse) => {
+    setAuthToken(result.accessToken);
+    console.log('✅ 토큰 저장 완료');
+    console.log(`✅ ${result.user.name}님 환영합니다!`);
+    router.replace('/(tabs)/foodshot' as any);
+  };
+
+  const handleLoginError = (error: any, shouldAlert = true): string => {
+    console.error('❌ 로그인 에러 발생!');
+    console.error('에러 객체:', error);
+    console.error('에러 이름:', error?.name);
+    console.error('에러 메시지:', error?.message);
+    
+    let errorMessage = '로그인 중 오류가 발생했습니다.';
+    
+    if (error?.name === 'AbortError') {
+      errorMessage = '요청 시간이 초과되었습니다. 백엔드 서버를 확인해주세요.';
+    } else if (error?.message?.includes('fetch')) {
+      errorMessage = '네트워크 오류입니다. 백엔드 서버가 실행 중인지 확인하세요.';
+    } else if (error?.message) {
+      errorMessage = error.message;
+    }
+    
+    console.error('🔴 에러 메시지:', errorMessage);
+    
+    if (shouldAlert && typeof window !== 'undefined' && window.alert) {
+      window.alert(`로그인 오류\n\n${errorMessage}`);
+    }
+
+    return errorMessage;
+  };
 
   // 실제 카카오 로그인 처리
   const doLogin = async () => {
@@ -25,43 +61,60 @@ export default function LoginScreen() {
       console.log('🔵 백엔드 카카오 로그인 요청... (토큰 길이:', kakaoAccessToken.length, ')');
       const result = await kakaoLogin(kakaoAccessToken);
 
-      // JWT 토큰 저장
-      setAuthToken(result.accessToken);
-      console.log('✅ 토큰 저장 완료');
-      console.log(`✅ ${result.user.name}님 환영합니다!`);
-
-      router.replace('/(tabs)/foodshot' as any);
+      handleLoginSuccess(result);
     } catch (error: any) {
-      console.error('❌ 로그인 에러 발생!');
-      console.error('에러 객체:', error);
-      console.error('에러 이름:', error?.name);
-      console.error('에러 메시지:', error?.message);
-      
-      let errorMessage = '로그인 중 오류가 발생했습니다.';
-      
-      if (error?.name === 'AbortError') {
-        errorMessage = '요청 시간이 초과되었습니다. 백엔드 서버를 확인해주세요.';
-      } else if (error?.message?.includes('fetch')) {
-        errorMessage = '네트워크 오류입니다. 백엔드 서버가 실행 중인지 확인하세요.';
-      } else {
-        errorMessage = error?.message || '알 수 없는 오류가 발생했습니다.';
-      }
-      
-      console.error('🔴 에러 메시지:', errorMessage);
-      
-      // 웹 환경에서는 Alert 대신 콘솔 출력
-      if (typeof window !== 'undefined' && window.alert) {
-        window.alert(`로그인 오류\n\n${errorMessage}`);
-      }
+      handleLoginError(error);
     } finally {
-      setLoading(false);
+      setKakaoLoading(false);
     }
   };
 
   // 카카오 로그인 버튼 핸들러
   const handleKakaoLogin = async () => {
-    setLoading(true);
+    setKakaoLoading(true);
     await doLogin();
+  };
+
+  const handleEmailChange = (value: string) => {
+    if (formError) {
+      setFormError(null);
+    }
+    setEmail(value);
+  };
+
+  const handlePasswordChange = (value: string) => {
+    if (formError) {
+      setFormError(null);
+    }
+    setPassword(value);
+  };
+
+  const handleEmailLogin = async () => {
+    if (!email.trim() || !password) {
+      setFormError('이메일과 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+
+    setFormError(null);
+    setEmailLoading(true);
+
+    try {
+      const result = await emailLogin({
+        email: email.trim(),
+        password,
+      });
+
+      handleLoginSuccess(result);
+    } catch (error: any) {
+      const message = handleLoginError(error, false);
+      setFormError(message || '로그인 중 오류가 발생했습니다.');
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleEmailSignupNavigation = () => {
+    router.push('/signup' as any);
   };
 
   return (
@@ -82,23 +135,71 @@ export default function LoginScreen() {
 
       {/* 버튼 영역 */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.kakaoButton, loading && styles.kakaoButtonDisabled]} 
+        <View style={styles.formContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="이메일"
+            placeholderTextColor="#A0A0A0"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            value={email}
+            onChangeText={handleEmailChange}
+            editable={!kakaoLoading && !emailLoading}
+            returnKeyType="next"
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="비밀번호"
+            placeholderTextColor="#A0A0A0"
+            secureTextEntry
+            value={password}
+            onChangeText={handlePasswordChange}
+            editable={!kakaoLoading && !emailLoading}
+            returnKeyType="done"
+            onSubmitEditing={handleEmailLogin}
+          />
+
+          {formError ? (
+            <Text style={styles.errorText}>{formError}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={[
+              styles.emailLoginButton,
+              (emailLoading || kakaoLoading) && styles.emailLoginButtonDisabled,
+            ]}
+            onPress={handleEmailLogin}
+            disabled={emailLoading || kakaoLoading}
+          >
+            {emailLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.emailLoginButtonText}>로그인</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* 카카오 로그인 버튼 - 주석처리됨 (기능은 유지) */}
+        {/* <TouchableOpacity 
+          style={[styles.kakaoButton, kakaoLoading && styles.kakaoButtonDisabled]} 
           onPress={handleKakaoLogin}
-          disabled={loading}
+          disabled={kakaoLoading || emailLoading}
         >
-          {loading ? (
+          {kakaoLoading ? (
             <ActivityIndicator color="#000000" />
           ) : (
             <Text style={styles.kakaoButtonText}>카카오로 시작하기</Text>
           )}
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         
-        <TouchableOpacity style={styles.loginLink}>
-          <Text style={styles.loginLinkText}>
-            이미 닥터당의 회원이신가요? 로그인{' '}
-            <Text style={styles.arrow}>→</Text>
-          </Text>
+        <TouchableOpacity
+          style={styles.signupButton}
+          onPress={handleEmailSignupNavigation}
+          disabled={kakaoLoading || emailLoading}
+        >
+          <Text style={styles.signupButtonText}>이메일로 회원가입하기</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -145,6 +246,51 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
   },
+  formContainer: {
+    width: '100%',
+    backgroundColor: '#F8F8F8',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  input: {
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    backgroundColor: '#FFFFFF',
+    color: '#111111',
+    marginBottom: 12,
+  },
+  errorText: {
+    color: '#D32F2F',
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  emailLoginButton: {
+    width: '100%',
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  emailLoginButtonDisabled: {
+    opacity: 0.6,
+  },
+  emailLoginButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
   kakaoButton: {
     width: '100%',
     backgroundColor: '#FEE500',
@@ -161,15 +307,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000000',
   },
-  loginLink: {
-    paddingVertical: 8,
+  signupButton: {
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#111827',
+    paddingVertical: 14,
+    alignItems: 'center',
   },
-  loginLinkText: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  arrow: {
-    color: '#FF6B35',
+  signupButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
   },
 });
 

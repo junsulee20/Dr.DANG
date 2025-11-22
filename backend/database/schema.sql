@@ -19,6 +19,7 @@ CREATE TABLE users (
   kakao_id TEXT UNIQUE,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
+  password_hash TEXT,
   height INTEGER,  -- cm
   weight INTEGER,  -- kg
   profile_image_url TEXT,

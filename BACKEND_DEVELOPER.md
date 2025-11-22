@@ -219,6 +219,7 @@ CREATE TABLE users (
   kakao_id TEXT UNIQUE,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
+  password_hash TEXT,
   height INTEGER,  -- cm
   weight INTEGER,  -- kg
   profile_image_url TEXT,
@@ -323,6 +324,17 @@ CREATE POLICY "Users can update own records"
 - 모든 API는 `Authorization: Bearer {token}` 헤더 필요
 - Supabase JWT 검증
 - 토큰 만료 시 401 에러 반환
+
+### 이메일 로그인 계정 관리 스크립트
+- 일반 로그인 전용 계정 생성/비밀번호 변경은 CLI 스크립트로 자동화했습니다.
+- 사용법:
+  ```
+  # 새 계정 생성 또는 기존 계정 비밀번호 갱신
+  cd backend
+  npm run create:email-user -- --email=user@example.com --password=새비밀번호 --name="홍길동"
+  ```
+- `--name`은 옵션이며, 미입력 시 이메일 앞부분을 이름으로 사용합니다.
+- 동일 이메일이 이미 존재하면 `password_hash`만 갱신되고, 없으면 새 레코드를 생성합니다.
 
 ### 에러 응답 형식
 ```json

@@ -193,6 +193,53 @@ export async function kakaoLogin(
   }
 }
 
+export interface EmailLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface EmailSignupRequest {
+  name: string;
+  email: string;
+  password: string;
+  height: number;
+  weight: number;
+}
+
+export async function emailLogin(
+  credentials: EmailLoginRequest
+): Promise<KakaoLoginResponse> {
+  console.log('🔵 API 호출: POST /auth/email/login');
+  try {
+    const result = await apiFetch<KakaoLoginResponse>('/auth/email/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+    console.log('✅ 이메일 로그인 성공:', result.user.email);
+    return result;
+  } catch (error: any) {
+    console.error('❌ 이메일 로그인 에러:', error);
+    throw error;
+  }
+}
+
+export async function emailSignup(
+  payload: EmailSignupRequest
+): Promise<KakaoLoginResponse> {
+  console.log('🔵 API 호출: POST /auth/email/signup');
+  try {
+    const result = await apiFetch<KakaoLoginResponse>('/auth/email/signup', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    console.log('✅ 이메일 회원가입 성공:', result.user.email);
+    return result;
+  } catch (error: any) {
+    console.error('❌ 이메일 회원가입 에러:', error);
+    throw error;
+  }
+}
+
 // ========================================
 // 음식 분석 API
 // ========================================
