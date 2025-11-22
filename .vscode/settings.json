@@ -1,7 +1,22 @@
 {
-  "editor.codeActionsOnSave": {
-    "source.fixAll": "explicit",
-    "source.organizeImports": "explicit",
-    "source.sortMembers": "explicit"
+  // Supabase Edge Functions (Deno 환경) 설정
+  "deno.enable": true,
+  "deno.enablePaths": [
+    "supabase/functions"
+  ],
+  "deno.lint": true,
+  "deno.unstable": false,
+  
+  // TypeScript 설정: supabase/functions는 제외
+  "typescript.preferences.excludePackageJsonAutoImports": "off",
+  
+  // 파일별 설정
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  
+  // supabase/functions 내의 파일은 Deno로 처리
+  "files.associations": {
+    "supabase/functions/**/*.ts": "typescript"
   }
 }

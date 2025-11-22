@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, TextInput } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { kakaoLogin, setAuthToken, KakaoLoginResponse, emailLogin } from '@/lib/api';
@@ -14,8 +14,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleLoginSuccess = (result: KakaoLoginResponse) => {
-    setAuthToken(result.accessToken);
+  const handleLoginSuccess = async (result: KakaoLoginResponse) => {
+    await setAuthToken(result.accessToken);
     console.log('✅ 토큰 저장 완료');
     console.log(`✅ ${result.user.name}님 환영합니다!`);
     router.replace('/(tabs)/foodshot' as any);
@@ -61,7 +61,7 @@ export default function LoginScreen() {
       console.log('🔵 백엔드 카카오 로그인 요청... (토큰 길이:', kakaoAccessToken.length, ')');
       const result = await kakaoLogin(kakaoAccessToken);
 
-      handleLoginSuccess(result);
+      await handleLoginSuccess(result);
     } catch (error: any) {
       handleLoginError(error);
     } finally {
@@ -104,7 +104,7 @@ export default function LoginScreen() {
         password,
       });
 
-      handleLoginSuccess(result);
+      await handleLoginSuccess(result);
     } catch (error: any) {
       const message = handleLoginError(error, false);
       setFormError(message || '로그인 중 오류가 발생했습니다.');
@@ -120,88 +120,99 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
-      {/* 로고 영역 */}
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('@/assets/images/logo.png')} 
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
-        <Text style={styles.appName}>Dr. DANG</Text>
-        <Text style={styles.appNameKorean}>닥터당</Text>
-        <Text style={styles.tagline}>사진 한 장으로, 당뇨 케어</Text>
-      </View>
-
-      {/* 버튼 영역 */}
-      <View style={styles.buttonContainer}>
-        <View style={styles.formContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="이메일"
-            placeholderTextColor="#A0A0A0"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            value={email}
-            onChangeText={handleEmailChange}
-            editable={!kakaoLoading && !emailLoading}
-            returnKeyType="next"
-          />
-
-          <TextInput
-            style={styles.input}
-            placeholder="비밀번호"
-            placeholderTextColor="#A0A0A0"
-            secureTextEntry
-            value={password}
-            onChangeText={handlePasswordChange}
-            editable={!kakaoLoading && !emailLoading}
-            returnKeyType="done"
-            onSubmitEditing={handleEmailLogin}
-          />
-
-          {formError ? (
-            <Text style={styles.errorText}>{formError}</Text>
-          ) : null}
-
-          <TouchableOpacity
-            style={[
-              styles.emailLoginButton,
-              (emailLoading || kakaoLoading) && styles.emailLoginButtonDisabled,
-            ]}
-            onPress={handleEmailLogin}
-            disabled={emailLoading || kakaoLoading}
-          >
-            {emailLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.emailLoginButtonText}>로그인</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* 카카오 로그인 버튼 - 주석처리됨 (기능은 유지) */}
-        {/* <TouchableOpacity 
-          style={[styles.kakaoButton, kakaoLoading && styles.kakaoButtonDisabled]} 
-          onPress={handleKakaoLogin}
-          disabled={kakaoLoading || emailLoading}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {kakaoLoading ? (
-            <ActivityIndicator color="#000000" />
-          ) : (
-            <Text style={styles.kakaoButtonText}>카카오로 시작하기</Text>
-          )}
-        </TouchableOpacity> */}
-        
-        <TouchableOpacity
-          style={styles.signupButton}
-          onPress={handleEmailSignupNavigation}
-          disabled={kakaoLoading || emailLoading}
-        >
-          <Text style={styles.signupButtonText}>이메일로 회원가입하기</Text>
-        </TouchableOpacity>
-      </View>
+          {/* 로고 영역 */}
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('@/assets/images/logo.png')} 
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.appName}>Dr. DANG</Text>
+            <Text style={styles.appNameKorean}>닥터당</Text>
+            <Text style={styles.tagline}>사진 한 장으로, 당뇨 케어</Text>
+          </View>
+
+          {/* 버튼 영역 */}
+          <View style={styles.buttonContainer}>
+            <View style={styles.formContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="이메일"
+                placeholderTextColor="#A0A0A0"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                value={email}
+                onChangeText={handleEmailChange}
+                editable={!kakaoLoading && !emailLoading}
+                returnKeyType="next"
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="비밀번호"
+                placeholderTextColor="#A0A0A0"
+                secureTextEntry
+                value={password}
+                onChangeText={handlePasswordChange}
+                editable={!kakaoLoading && !emailLoading}
+                returnKeyType="done"
+                onSubmitEditing={handleEmailLogin}
+              />
+
+              {formError ? (
+                <Text style={styles.errorText}>{formError}</Text>
+              ) : null}
+
+              <TouchableOpacity
+                style={[
+                  styles.emailLoginButton,
+                  (emailLoading || kakaoLoading) && styles.emailLoginButtonDisabled,
+                ]}
+                onPress={handleEmailLogin}
+                disabled={emailLoading || kakaoLoading}
+              >
+                {emailLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.emailLoginButtonText}>로그인</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* 카카오 로그인 버튼 - 주석처리됨 (기능은 유지) */}
+            {/* <TouchableOpacity 
+              style={[styles.kakaoButton, kakaoLoading && styles.kakaoButtonDisabled]} 
+              onPress={handleKakaoLogin}
+              disabled={kakaoLoading || emailLoading}
+            >
+              {kakaoLoading ? (
+                <ActivityIndicator color="#000000" />
+              ) : (
+                <Text style={styles.kakaoButtonText}>카카오로 시작하기</Text>
+              )}
+            </TouchableOpacity> */}
+            
+            <TouchableOpacity
+              style={styles.signupButton}
+              onPress={handleEmailSignupNavigation}
+              disabled={kakaoLoading || emailLoading}
+            >
+              <Text style={styles.signupButtonText}>이메일로 회원가입하기</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -210,13 +221,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 20,
   },
   logoContainer: {
     alignItems: 'center',
-    flex: 1,
     justifyContent: 'center',
+    paddingTop: 40,
+    paddingBottom: 20,
   },
   logoImage: {
     width: 120,

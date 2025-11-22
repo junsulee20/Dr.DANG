@@ -29,12 +29,12 @@ export default function ApiTestScreen() {
   };
 
   // 토큰 저장
-  const saveToken = () => {
+  const saveToken = async () => {
     if (!token.trim()) {
       Alert.alert('오류', '토큰을 입력해주세요');
       return;
     }
-    setAuthToken(token.trim());
+    await setAuthToken(token.trim());
     Alert.alert('성공', '토큰이 저장되었습니다');
   };
 

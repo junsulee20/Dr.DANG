@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 // @ts-ignore
 import { useFoodAnalysis } from '@/contexts/FoodAnalysisContext';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState, useCallback } from 'react';
@@ -42,16 +43,37 @@ export default function FoodshotScreen() {
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.8, // base64를 위해 quality 조정 (1.0은 너무 클 수 있음)
-      base64: true, // Base64 데이터 포함
+      quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      const uri = asset.uri;
-      setLocalImageUri(uri);
-      setImageUri(uri); // Context에 저장
-      setImageBase64(null); // 백엔드가 처리하므로 base64는 불필요
+      const originalUri = asset.uri;
+      
+      // 이미지 최적화: 최대 1024x1024로 리사이징하고 quality 0.7로 압축
+      try {
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
+          originalUri,
+          [{ resize: { width: 1024 } }], // 비율 유지하며 최대 너비 1024px
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        
+        console.log('✅ 이미지 최적화 완료:', {
+          원본: originalUri,
+          최적화: manipulatedImage.uri,
+          크기: manipulatedImage.width + 'x' + manipulatedImage.height
+        });
+        
+        setLocalImageUri(manipulatedImage.uri);
+        setImageUri(manipulatedImage.uri); // 최적화된 이미지 사용
+        setImageBase64(null);
+      } catch (error) {
+        console.error('이미지 최적화 실패, 원본 사용:', error);
+        // 최적화 실패 시 원본 사용
+        setLocalImageUri(originalUri);
+        setImageUri(originalUri);
+        setImageBase64(null);
+      }
     }
   };
 
@@ -68,10 +90,32 @@ export default function FoodshotScreen() {
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      const uri = asset.uri;
-      setLocalImageUri(uri);
-      setImageUri(uri); // Context에 저장
-      setImageBase64(null); // 백엔드가 처리하므로 base64는 불필요
+      const originalUri = asset.uri;
+      
+      // 이미지 최적화: 최대 1024x1024로 리사이징하고 quality 0.7로 압축
+      try {
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
+          originalUri,
+          [{ resize: { width: 1024 } }], // 비율 유지하며 최대 너비 1024px
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        
+        console.log('✅ 이미지 최적화 완료:', {
+          원본: originalUri,
+          최적화: manipulatedImage.uri,
+          크기: manipulatedImage.width + 'x' + manipulatedImage.height
+        });
+        
+        setLocalImageUri(manipulatedImage.uri);
+        setImageUri(manipulatedImage.uri); // 최적화된 이미지 사용
+        setImageBase64(null);
+      } catch (error) {
+        console.error('이미지 최적화 실패, 원본 사용:', error);
+        // 최적화 실패 시 원본 사용
+        setLocalImageUri(originalUri);
+        setImageUri(originalUri);
+        setImageBase64(null);
+      }
     }
   };
 

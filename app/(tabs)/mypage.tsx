@@ -48,7 +48,7 @@ export default function MypageScreen() {
       // 401 에러면 로그인 페이지로 리다이렉트
       if (error.code === 'UNAUTHORIZED') {
         console.log('🔴 인증 만료 - 로그인 페이지로 이동');
-        setAuthToken(null); // 토큰 제거
+        await setAuthToken(null); // 토큰 제거
         setTimeout(() => router.replace('/login' as any), 100);
       } else {
         console.log('🔴 기타 에러:', error.message);
@@ -105,8 +105,8 @@ export default function MypageScreen() {
     }
   };
 
-  const handleLogout = () => {
-    setAuthToken(null);
+  const handleLogout = async () => {
+    await setAuthToken(null);
     router.replace('/login' as any);
   };
 

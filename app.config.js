@@ -67,7 +67,10 @@ module.exports = {
         projectId: 'b3bcabcc-3ab5-4a9e-aa92-b3c9437e83f2',
       },
       openaiApiKey: process.env.OPENAI_API_KEY,
-      // 프론트엔드에서 백엔드 API 서버 URL
+      // Supabase 설정 (Edge Functions 사용)
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
+      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '',
+      // 레거시: Express 서버 URL (개발용)
       apiUrl: process.env.API_URL || 'http://127.0.0.1:3001',
       kakaoClientId: process.env.EXPO_PUBLIC_KAKAO_CLIENT_ID || process.env.KAKAO_CLIENT_ID,
       // kakaoRedirectUri는 더 이상 사용하지 않음 (백엔드 콜백 URL을 자동으로 사용)
